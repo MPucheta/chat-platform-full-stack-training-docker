@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  database:
+    image: mpucheta/postgresql:11.4
+    volumes:
+      - chat-platform:/var/lib/postgresql/data
+    network_mode: host
+    command: -p 3000
+
+  backend:
+    image: mpucheta/chat-platform-backend:1.0
+    network_mode: host
+    command: sh -c "cd src/ && npx sequelize-cli db:migrate && cd .. && npm run dev"
+    depends_on: 
+      - database
+      
+  frontend:
+    image: mpucheta/chat-platform-frontend:1.0
+    network_mode: host
+    environment:
+      - PORT=3002
+    command: sh -c "npm start"
+    depends_on: 
+      - backend
+
+volumes:
+  chat-platform:
