@@ -2,27 +2,47 @@ version: "3"
 
 services:
   database:
-    image: mpucheta/postgresql:11.4
-    volumes:
-      - chat-platform:/var/lib/postgresql/data
-    network_mode: host
-    command: -p 3000
+    container_name: cp-db
+    image: postgres:alpine
+    environment:
+      - POSTGRES_DB=chat-platform-dev
+      - POSTGRES_USER=chatplatform
+      - POSTGRES_PASSWORD=chatplatform
+    ports:
+      - "3000:5432"
 
   backend:
-    image: mpucheta/chat-platform-backend:1.0
-    network_mode: host
-    command: sh -c "cd src/ && npx sequelize-cli db:migrate && cd .. && npm run dev"
+    container_name: cp-backend
     depends_on: 
       - database
-      
-  frontend:
-    image: mpucheta/chat-platform-frontend:1.0
-    network_mode: host
+    build:
+      context: ../chat-platform-full-stack-training
+      dockerfile: Dockerfile
+    volumes:
+    - "../chat-platform-full-stack-training:/usr/src/app"
+    - "/usr/src/app/node_modules"
     environment:
-      - PORT=3002
-    command: sh -c "npm start"
-    depends_on: 
-      - backend
-
-volumes:
-  chat-platform:
+      - PORT = 3000
+      - DEV_DATABASE=chat-platform-dev
+      - TEST_DATABASE=chat-platform-test
+      - PROD_DATABASE=chat-platform-prod
+      - DB_USER=chatplatform
+      - DB_PASSWORD=chatplatform
+      - DB_ADDR=database
+      - DB_PORT=5432
+    ports:
+      - "3001:3000"
+    
+  frontend:
+    container_name: cp-frontend
+    build:
+      context: ../chat-platform-full-stack-training-frontend
+      dockerfile: Dockerfile
+    volumes:
+    - "../chat-platform-full-stack-training-frontend:/usr/src/app"
+    - "/usr/src/app/node_modules"
+    environment:
+      - REACT_APP_BACKEND_ADDR = backend
+      - REACT_APP_BACKEND_PORT  = 3000
+    ports:
+      - "3002:3000"
