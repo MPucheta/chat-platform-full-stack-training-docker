@@ -2,27 +2,64 @@ version: "3"
 
 services:
   database:
-    image: mpucheta/postgresql:11.4
-    volumes:
-      - chat-platform:/var/lib/postgresql/data
-    network_mode: host
-    command: -p 3000
+    container_name: cp-db
+    # No need for a custom image. Docker's official PostgreSQL image is enough.
+    #image: mpucheta/postgresql:11.4
+    image: postgres:alpine
+    # No need to have this volume
+    # volumes:
+    #   - chat-platform:/var/lib/postgresql/data
+    # network_mode: host
+    # In order to expose PostgreSQL to the host, you only need to use the "ports" option
+    # command: -p 3000
+    ports:
+    - "3000:5432"
 
   backend:
-    image: mpucheta/chat-platform-backend:1.0
-    network_mode: host
-    command: sh -c "cd src/ && npx sequelize-cli db:migrate && cd .. && npm run dev"
-    depends_on: 
+    container_name: cp-backend
+    depends_on:
       - database
-      
-  frontend:
-    image: mpucheta/chat-platform-frontend:1.0
-    network_mode: host
+    # Again. No need to create a custom image. This may be an overkill.
+    # image: mpucheta/chat-platform-backend:1.0
+    # network_mode: host
+    # command: sh -c "cd src/ && npx sequelize-cli db:migrate && cd .. && npm run dev"
+    build:
+      context: ../chat-platform-full-stack-training
+      dockerfile: Dockerfile
+    volumes:
+    - "../chat-platform-full-stack-training:/usr/src/app"
+    - "/usr/src/app/node_modules" # TODO: Read why is this necessary.
     environment:
-      - PORT=3002
-    command: sh -c "npm start"
-    depends_on: 
-      - backend
+    # TODO: Set environment variables to connect to the database.
+    - PORT=3000
+    - DB_NAME=postgres
+    - DB_USER=postgres
+    - DB_PASS=
+    - DB_PORT=5432
+    - DB_HOST=database
+    ports:
+    - "3001:3000"
 
-volumes:
-  chat-platform:
+  frontend:
+    container_name: cp-frontend
+    # image: mpucheta/chat-platform-frontend:1.0
+    # network_mode: host
+    # command: sh -c "npm start"
+    # TODO: Is this dependency real?
+    # depends_on:
+    #   - backend
+    build:
+      context: ../chat-platform-full-stack-training-frontend
+      dockerfile: Dockerfile
+    volumes:
+    - "../chat-platform-full-stack-training-frontend:/usr/src/app"
+    - "/usr/src/app/node_modules"
+    environment:
+    # TODO: Set environment variables to connect to the backend.
+    - PORT=3000
+    ports:
+    - "3002:3000"
+
+# Volumes are set by service
+# volumes:
+#   chat-platform:
